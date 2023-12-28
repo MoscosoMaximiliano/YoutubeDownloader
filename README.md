@@ -5,7 +5,7 @@
 First of all need to install the required modules, we going to execute 
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt -t <path-to-the-lib-directory>
 ```
 
 After this on the console we can execute

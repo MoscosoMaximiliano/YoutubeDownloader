@@ -3,11 +3,20 @@ from rich.console import Console
 from rich.table import Table
 from rich import print as rprint
 from rich import box
-from rich.progress import Progress
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    TransferSpeedColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 import sys
 import argparse
 import os
+import time
 
 def Check_Option(option):
     return True if option.lower() == "y" else False
@@ -22,42 +31,66 @@ def Create_Table(streams, is_audio):
         table.add_column(column, justify="center")
 
     for item in filtered_streams:
-        table.add_row(
-                str(item.itag),
-                str(item.abr),
-            ) if is_audio else table.add_row(
-                str(item.itag),
-                str(item.resolution),
-                str(item.fps),
-            )
+        if is_audio:
+            table.add_row(str(item.itag), str(item.abr)) 
+        else: 
+            table.add_row(str(item.itag), str(item.resolution), str(item.fps))
 
     console = Console()
 
     console.print(table)
 
+# def Download_Video(stream, chunk, bytes_remaining):
+#     total_size_file = stream.filesize
+#     print(chunk)
+#     with Progress(
+#         "Downloading Video... ",
+#         BarColumn(),
+#         DownloadColumn(binary_units=True),
+#         TextColumn("•"),
+#         TransferSpeedColumn(),
+#         TextColumn("•"),
+#         TimeElapsedColumn(),
+#         TextColumn("•"),
+#         TimeRemainingColumn()
+#     ) as progress:
+#         task = progress.add_task("Downloading Video...", total=total_size_file)
+
+#         completed = (stream.filesize - bytes_remaining)
+
+#         progress.update(
+#             task, 
+#             completed=completed, 
+#             refresh=True
+#         )
+
 def Download_Video(stream, chunk, bytes_remaining):
-    with Progress() as progress:
-        task = progress.add_task("Downloading Video...", total=stream.filesize)
-
-        while not progress.finished:
-            progress.update(task, completed=stream.filesize - bytes_remaining, refresh=True)
+    progress.update(task, completed=stream.filesize - bytes_remaining, refresh=True)
 
 
+parser = argparse.ArgumentParser(description="Script used for download youtube videos/audios")
+parser.add_argument("--url", help="The Url of the Youtube Video")
+parser.add_argument("--onlyaudio", help="Write this flag if you want only the audio of the video", action=argparse.BooleanOptionalAction)
+args = parser.parse_args(sys.argv[1:])
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Script used for download youtube videos/audios")
-    parser.add_argument("--url", help="The Url of the Youtube Video")
-    parser.add_argument("--onlyaudio", help="Write this flag if you want only the audio of the video", action=argparse.BooleanOptionalAction)
-    args = parser.parse_args(sys.argv[1:])
-
+progress = Progress(
+        "Downloading Video... ",
+        BarColumn(),
+        DownloadColumn(binary_units=True),
+        TextColumn("•"),
+        TransferSpeedColumn(),
+        TextColumn("•"),
+        TimeElapsedColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn()
+    )
+with progress:
     yt_video = YouTube(args.url, on_progress_callback=Download_Video)
-
+        
     rprint(f"Are you going to download \n[italic magenta]:link:[link={args.url}]{yt_video.title}[/link][/italic magenta]\nContinue?: [bold green] [Y]: Yes [/bold green][bold red] [N]: No [/bold red]")
 
-    if Check_Option(input()) == False:
+    if not Check_Option(input()):
         sys.exit()
-
-    
 
     Create_Table(yt_video.streams, args.onlyaudio)
 
@@ -66,6 +99,8 @@ if __name__ == "__main__":
     id_value = input()
 
     stream = yt_video.streams.get_by_itag(int(id_value))
+
+    task = progress.add_task("Downloading Video...", total=stream.filesize)
 
     path_file = stream.download()
 
