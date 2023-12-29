@@ -40,70 +40,46 @@ def Create_Table(streams, is_audio):
 
     console.print(table)
 
-# def Download_Video(stream, chunk, bytes_remaining):
-#     total_size_file = stream.filesize
-#     print(chunk)
-#     with Progress(
-#         "Downloading Video... ",
-#         BarColumn(),
-#         DownloadColumn(binary_units=True),
-#         TextColumn("•"),
-#         TransferSpeedColumn(),
-#         TextColumn("•"),
-#         TimeElapsedColumn(),
-#         TextColumn("•"),
-#         TimeRemainingColumn()
-#     ) as progress:
-#         task = progress.add_task("Downloading Video...", total=total_size_file)
-
-#         completed = (stream.filesize - bytes_remaining)
-
-#         progress.update(
-#             task, 
-#             completed=completed, 
-#             refresh=True
-#         )
-
 def Download_Video(stream, chunk, bytes_remaining):
     progress.update(task, completed=stream.filesize - bytes_remaining, refresh=True)
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Script used for download youtube videos/audios")
+    parser.add_argument("--url", help="The Url of the Youtube Video")
+    parser.add_argument("--onlyaudio", help="Write this flag if you want only the audio of the video", action=argparse.BooleanOptionalAction)
+    args = parser.parse_args(sys.argv[1:])
 
-parser = argparse.ArgumentParser(description="Script used for download youtube videos/audios")
-parser.add_argument("--url", help="The Url of the Youtube Video")
-parser.add_argument("--onlyaudio", help="Write this flag if you want only the audio of the video", action=argparse.BooleanOptionalAction)
-args = parser.parse_args(sys.argv[1:])
+    progress = Progress(
+            "Downloading Video... ",
+            BarColumn(),
+            DownloadColumn(binary_units=True),
+            TextColumn("•"),
+            TransferSpeedColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            TextColumn("•"),
+            TimeRemainingColumn()
+        )
+    with progress:
+        yt_video = YouTube(args.url, on_progress_callback=Download_Video)
+            
+        rprint(f"Are you going to download \n[italic magenta]:link:[link={args.url}]{yt_video.title}[/link][/italic magenta]\nContinue?: [bold green] [Y]: Yes [/bold green][bold red] [N]: No [/bold red]")
 
-progress = Progress(
-        "Downloading Video... ",
-        BarColumn(),
-        DownloadColumn(binary_units=True),
-        TextColumn("•"),
-        TransferSpeedColumn(),
-        TextColumn("•"),
-        TimeElapsedColumn(),
-        TextColumn("•"),
-        TimeRemainingColumn()
-    )
-with progress:
-    yt_video = YouTube(args.url, on_progress_callback=Download_Video)
-        
-    rprint(f"Are you going to download \n[italic magenta]:link:[link={args.url}]{yt_video.title}[/link][/italic magenta]\nContinue?: [bold green] [Y]: Yes [/bold green][bold red] [N]: No [/bold red]")
+        if not Check_Option(input()):
+            sys.exit()
 
-    if not Check_Option(input()):
-        sys.exit()
+        Create_Table(yt_video.streams, args.onlyaudio)
 
-    Create_Table(yt_video.streams, args.onlyaudio)
+        rprint("[italic]Select by :id_button:[red blink]ID[/red blink] what do you want to download[/italic]")
 
-    rprint("[italic]Select by :id_button:[red blink]ID[/red blink] what do you want to download[/italic]")
+        id_value = input()
 
-    id_value = input()
+        stream = yt_video.streams.get_by_itag(int(id_value))
 
-    stream = yt_video.streams.get_by_itag(int(id_value))
+        task = progress.add_task("Downloading Video...", total=stream.filesize)
 
-    task = progress.add_task("Downloading Video...", total=stream.filesize)
+        path_file = stream.download()
 
-    path_file = stream.download()
-
-    if args.onlyaudio:
-        pre, ext = os.path.splitext(path_file)
-        os.rename(path_file, pre + ".mp3")
+        if args.onlyaudio:
+            pre, ext = os.path.splitext(path_file)
+            os.rename(path_file, pre + ".mp3")
